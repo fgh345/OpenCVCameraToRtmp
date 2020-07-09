@@ -6,6 +6,10 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
+extern "C"
+{
+//#include <libswscale/swscale.h>
+}
 
 using namespace cv;
 using namespace std;
@@ -15,7 +19,10 @@ using namespace std;
 int main()
 {
 	VideoCapture cap;
+	namedWindow("preview");
 	int ret = cap.open(0, CAP_DSHOW);
+
+	
 
 	while (1)
 	{
@@ -27,7 +34,7 @@ int main()
 			cout << "Finish" << endl;
 			break;
 		}
-		imshow("Input video", frame);
+		imshow("preview", frame);
 		waitKey(30);
 	}
 	cap.release();
