@@ -148,6 +148,9 @@
   <ItemGroup>
     <ClCompile Include="OpenCVCameraToRtmp.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="OpenCVCameraToRtmp.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
