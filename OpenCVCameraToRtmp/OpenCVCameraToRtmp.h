@@ -14,7 +14,7 @@ extern "C"
 #include "libavutil/time.h"
 #include "libavfilter/buffersink.h"
 #include "libavfilter/buffersrc.h"
-
+#include "libavutil/imgutils.h"
 }
 
 #pragma comment(lib,"opencv_world440.lib")
@@ -25,6 +25,28 @@ extern "C"
 #pragma comment(lib,"avdevice.lib")
 #pragma comment(lib,"avfilter.lib")
 
+
+class TransmitBean
+{
+public:
+	cv::VideoCapture videoCapture;
+	AVFrame* avFrame;
+	SwsContext* swsContext;
+	AVCodecContext* codecContext_output;
+
+	AVFormatContext* formatContext_input;
+	AVCodecContext* codecContext_input;
+	AVFilterContext* buffer_src_ctx;
+	AVFilterContext* buffer_sink_ctx;
+};
+
+int initFFmpegFormat();
 int initCamera();
-int initMicrophone();
+TransmitBean initCameraByOpencv();
+TransmitBean initMicrophone();
+int preFFmpegFormat();
+void startVideo(TransmitBean tb);
+void startAudio(TransmitBean tb);
+
 void releaseALL();
+
