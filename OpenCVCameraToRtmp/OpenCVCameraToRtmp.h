@@ -17,7 +17,7 @@ extern "C"
 #include "libavutil/imgutils.h"
 }
 
-#pragma comment(lib,"opencv_world440.lib")
+#pragma comment(lib,"opencv_world440d.lib")
 #pragma comment(lib,"swscale.lib")
 #pragma comment(lib,"avformat.lib")
 #pragma comment(lib,"avcodec.lib")

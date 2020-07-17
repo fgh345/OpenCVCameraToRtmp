@@ -4,3 +4,5 @@ Debug/
 OpenCVCameraToRtmp/Debug
 OpenCVCameraToRtmp/x64
 OpenCVCameraToRtmp/out/
+OpenCVCameraToRtmp/dll/opencv_world440d.dll
+OpenCVCameraToRtmp/lib/opencv_world440d.lib

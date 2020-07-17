@@ -1,6 +1,4 @@
-﻿// OpenCVCameraToRtmp.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-
-#include "OpenCVCameraToRtmp.h"
+﻿#include "OpenCVCameraToRtmp.h"
 
 using namespace cv;
 using namespace std;
@@ -19,24 +17,25 @@ char file_out_path[] = "../out/result_file.flv";
 
 int64_t startTime;
 
-VideoCapture cap;
 AVFormatContext* formatContext_output;
+
+VideoCapture cap;
 
 int main()
 {
 
 	initFFmpegFormat();
-	//TransmitBean tb_video = initCameraByOpencv();
-	//TransmitBean tb_audio = initMicrophone();
+	TransmitBean tb_video = initCameraByOpencv();
+	TransmitBean tb_audio = initMicrophone();
 	preFFmpegFormat();
 
-	//thread thread_video([tb_video]() {
-	//	startVideo(tb_video);
-	//});
+	thread thread_video([tb_video]() {
+		startVideo(tb_video);
+	});
 
-	//thread thread_audio([tb_audio]() {
-	//	startAudio(tb_audio);
-	//});
+	thread thread_audio([tb_audio]() {
+		startAudio(tb_audio);
+	});
 
 	getchar();
 
@@ -64,8 +63,6 @@ int main()
 TransmitBean initCameraByOpencv() {
 
 	int ret = 0;
-
-	VideoCapture cap;
 
 	try
 	{
@@ -336,6 +333,7 @@ void startVideo(TransmitBean tb) {
 
 	while (true)
 	{
+
 		Mat frame;//定义一个变量把视频源一帧一帧显示
 		if (!cap.grab())
 		{
@@ -408,7 +406,9 @@ void startAudio(TransmitBean tb) {
 	AVFrame* frameOriginal = av_frame_alloc();
 	AVFrame* frameAAC = av_frame_alloc();
 	
-	int pts = 0;
+	long long pts = 0;
+
+	int stream_index = formatContext_output->nb_streams - 1;
 
 	while (true)
 	{
@@ -417,7 +417,7 @@ void startAudio(TransmitBean tb) {
 
 			if (0 >= avpkt_in->size)
 			{
-				return;
+				continue;
 			}
 
 			if (avcodec_send_packet(codecContext_input, avpkt_in) == 0)
@@ -439,7 +439,7 @@ void startAudio(TransmitBean tb) {
 					ret = av_buffersink_get_frame_flags(buffer_sink_ctx, frameAAC, AV_BUFFERSINK_FLAG_NO_REQUEST);
 					if (ret < 0)
 					{
-						return;
+						continue;
 					}
 
 					//pts 计算
@@ -450,8 +450,9 @@ void startAudio(TransmitBean tb) {
 					//AVRational itime = stream_input->time_base;
 					//AVRational otime = stream_output->time_base;
 
-					frameAAC->pts = frameAAC->nb_samples* pts++;
-					printf("audio.pts:%d\n", frameAAC->pts);
+					
+					frameAAC->pts = av_rescale_q(frameAAC->nb_samples * pts++, codecContext_output->time_base, formatContext_output->streams[stream_index]->time_base);
+					//printf("audio.pts:%d\n", frameAAC->pts);
 					//pst_p += av_rescale_q(frameAAC->nb_samples, codecContext_output->time_base, stream_output->time_base);
 
 					if (avcodec_send_frame(codecContext_output, frameAAC) == 0) {
@@ -467,7 +468,7 @@ void startAudio(TransmitBean tb) {
 								//avpkt_out->dts = av_rescale_q(avpkt_out->dts, codecContext_output->time_base, { 1,AV_TIME_BASE });
 								//avpkt_out->duration = av_rescale_q(avpkt_out->duration, codecContext_output->time_base, { 1,AV_TIME_BASE });
 								avpkt_out->pos = -1;
-								avpkt_out->stream_index = formatContext_output->nb_streams-1;
+								avpkt_out->stream_index = stream_index;
 
 								printf("pts:%d,dts:%d,size:%d,duration:%d\n", avpkt_out->pts, avpkt_out->dts, avpkt_out->size, avpkt_out->duration);
 
