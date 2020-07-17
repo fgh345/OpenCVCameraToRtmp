@@ -29,19 +29,17 @@ extern "C"
 class TransmitBean
 {
 public:
-	cv::VideoCapture videoCapture;
-	AVFrame* avFrame;
-	SwsContext* swsContext;
-	AVCodecContext* codecContext_output;
+	AVFrame* avFrame = NULL;
+	SwsContext* swsContext = NULL;
+	AVCodecContext* codecContext_output = NULL;
 
-	AVFormatContext* formatContext_input;
-	AVCodecContext* codecContext_input;
-	AVFilterContext* buffer_src_ctx;
-	AVFilterContext* buffer_sink_ctx;
+	AVFormatContext* formatContext_input = NULL;
+	AVCodecContext* codecContext_input = NULL;
+	AVFilterContext* buffer_src_ctx = NULL;
+	AVFilterContext* buffer_sink_ctx = NULL;
 };
 
 int initFFmpegFormat();
-int initCamera();
 TransmitBean initCameraByOpencv();
 TransmitBean initMicrophone();
 int preFFmpegFormat();
