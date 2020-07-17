@@ -7,19 +7,22 @@ using namespace std;
 int width_output = 1280;
 int heigth_output = 720;
 int fps_input = 60;//设置fps
+int out_video_bit_rate = 128000;//视频比特率
 
 int out_sample_rate = 44100;//音频采样
 int out_audio_bit_rate = 64000;//音频比特率
 
-//char vdevice_in_url[] = "video=USB2.0 Camera";// screen-capture-recorder 
-char adevice_in_url[] = "audio=virtual-audio-capturer";//麦克风设备
-char file_out_path[] = "../out/result_file.flv";
+char adevice_in_url[] = "audio=virtual-audio-capturer";//麦克风设备 virtual-audio-capturer ub570 (TC-UB570, Audio Capture)
+char file_out_path[] = "rtmp://192.168.30.20/live/livestream";
+//char file_out_path[] = "../out/result_file.flv";
 
-int64_t startTime;
+//int64_t startTime;
 
 AVFormatContext* formatContext_output;
 
 VideoCapture cap;
+
+bool isRun = true;
 
 int main()
 {
@@ -37,9 +40,28 @@ int main()
 		startAudio(tb_audio);
 	});
 
-	getchar();
 
-	//namedWindow("preview");
+
+	getchar();
+	//for (int i = 0; i < 10; i++)
+	//{
+	//	waitKey(10);
+	//} 
+	//if ('q' == getchar()) {
+
+
+			//	printf("Q");
+
+			//	isRun = false;
+
+			//	//写入封装尾
+			//	av_write_trailer(formatContext_output);
+
+			//	break;
+			//}
+
+
+
 
 
 
@@ -51,10 +73,9 @@ int main()
 	//}
 
 
-	
 
-	//写入封装尾
-	//av_write_trailer(ctx_out);
+
+
 
 
 
@@ -71,11 +92,11 @@ TransmitBean initCameraByOpencv() {
 	catch (const std::exception&)
 	{
 	}
-	if (ret==0)
+	if (ret == 0)
 	{
 		cout << "打开摄像头失败!" << endl;
 	}
-	
+
 
 	int width_input = cap.get(CAP_PROP_FRAME_WIDTH);
 	int heigth_input = cap.get(CAP_PROP_FRAME_HEIGHT);
@@ -83,6 +104,7 @@ TransmitBean initCameraByOpencv() {
 	if (fps_input > cap.get(CAP_PROP_FPS)) {
 		fps_input = cap.get(CAP_PROP_FPS);
 	}
+	printf("实际fps:%d \n", fps_input);
 
 	SwsContext* swsContext = sws_getCachedContext(NULL, width_input, heigth_input, AV_PIX_FMT_BGR24,
 		width_output, heigth_output, AV_PIX_FMT_YUV420P,
@@ -104,14 +126,14 @@ TransmitBean initCameraByOpencv() {
 
 	AVCodecContext* codecContext_output = avcodec_alloc_context3(codec);
 	codecContext_output->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;//全局参数
-	codecContext_output->thread_count = 2;//设置编码线程
-	codecContext_output->bit_rate = 50 * 1024 * 8;//单位bit
+	codecContext_output->thread_count = 8;//设置编码线程
+	codecContext_output->bit_rate = out_video_bit_rate;//单位bit
 	codecContext_output->width = width_output;
 	codecContext_output->height = heigth_output;
 	codecContext_output->time_base = { 1 , fps_input };
 	codecContext_output->framerate = { fps_input ,1 };
-	codecContext_output->gop_size = 50;
-	codecContext_output->max_b_frames = 0;
+	codecContext_output->gop_size = 10;
+	codecContext_output->max_b_frames = 0; //每一个p帧对应的b帧数
 	codecContext_output->codec_tag = 0;
 	codecContext_output->pix_fmt = AV_PIX_FMT_YUV420P;
 
@@ -148,7 +170,7 @@ TransmitBean initMicrophone() {
 	AVInputFormat* fmt = av_find_input_format("dshow");
 
 	AVDictionary* options = NULL;
-	//av_dict_set_int(&options, "audio_buffer_size", 20, 0);
+	av_dict_set_int(&options, "audio_buffer_size", 20, 0);
 	//av_dict_set(&options, "list_devices", "true", 0);
 
 	avformat_open_input(&formatContext_input, adevice_in_url, fmt, &options);
@@ -200,7 +222,7 @@ TransmitBean initMicrophone() {
 
 	avcodec_parameters_from_context(stream_output->codecpar, codecContext_output);
 
-	stream_output->time_base = {1,AV_TIME_BASE};
+	stream_output->time_base = { 1,AV_TIME_BASE };
 
 
 	//配置过滤器 重新采用音频
@@ -285,12 +307,12 @@ TransmitBean initMicrophone() {
 }
 
 int initFFmpegFormat() {
-	
+
 	avdevice_register_all();
 
 	avformat_alloc_output_context2(&formatContext_output, NULL, "flv", file_out_path);
 
-	startTime = av_gettime();
+	//startTime = av_gettime();
 
 	return 0;
 }
@@ -312,13 +334,12 @@ int preFFmpegFormat() {
 
 	for (int i = 0; i < formatContext_output->nb_streams; i++)
 	{
-		cout <<"stream_timebase"<< i <<";"<< formatContext_output->streams[i]->time_base.den << endl;
+		cout << "stream_timebase" << i << ";" << formatContext_output->streams[i]->time_base.den << endl;
 	}
 
 
-	printf("初始化完成!");
+	printf("初始化完成!\n");
 }
-
 
 void startVideo(TransmitBean tb) {
 
@@ -329,9 +350,9 @@ void startVideo(TransmitBean tb) {
 
 	AVPacket* pack = av_packet_alloc();
 
-	int pts = 0;
+	long long pts = 0;
 
-	while (true)
+	while (isRun)
 	{
 
 		Mat frame;//定义一个变量把视频源一帧一帧显示
@@ -373,20 +394,17 @@ void startVideo(TransmitBean tb) {
 			{
 				if (pack->size > 0) {
 
-					//pack->pts = av_rescale_q(pack->pts, codecContext_output->time_base, { 1,AV_TIME_BASE });// 前面是原始的 ,后面是要转换成为的
-					//pack->dts = av_rescale_q(pack->dts, codecContext_output->time_base, { 1,AV_TIME_BASE });
-					//pack->duration = av_rescale_q(pack->duration, codecContext_output->time_base, { 1,AV_TIME_BASE });
 					pack->pos = -1;
 					pack->stream_index = 0;
 
-					printf("pts:%d,dts:%d,size:%d,duration:%d\n", pack->pts, pack->dts, pack->size, pack->duration);
+					//printf("pts:%d,dts:%d,size:%d,duration:%d\n", pack->pts, pack->dts, pack->size, pack->duration);
 
 					av_interleaved_write_frame(formatContext_output, pack);
 				}
 			}
 		}
 
-		//cout << "#" << flush;
+		cout << "#" << flush;
 	}
 
 }
@@ -395,8 +413,8 @@ void startAudio(TransmitBean tb) {
 
 	AVFormatContext* formatContext_input = tb.formatContext_input;
 	AVCodecContext* codecContext_input = tb.codecContext_input;
-	AVFilterContext* buffer_src_ctx = tb.buffer_src_ctx; 
-	AVFilterContext* buffer_sink_ctx =  tb.buffer_sink_ctx;
+	AVFilterContext* buffer_src_ctx = tb.buffer_src_ctx;
+	AVFilterContext* buffer_sink_ctx = tb.buffer_sink_ctx;
 	AVCodecContext* codecContext_output = tb.codecContext_output;
 
 
@@ -405,12 +423,12 @@ void startAudio(TransmitBean tb) {
 
 	AVFrame* frameOriginal = av_frame_alloc();
 	AVFrame* frameAAC = av_frame_alloc();
-	
+
 	long long pts = 0;
 
 	int stream_index = formatContext_output->nb_streams - 1;
 
-	while (true)
+	while (isRun)
 	{
 		if (av_read_frame(formatContext_input, avpkt_in) == 0)
 		{
@@ -442,42 +460,24 @@ void startAudio(TransmitBean tb) {
 						continue;
 					}
 
-					//pts 计算
-					// second = nb_samples/sample_rate   一帧音频的秒数
-					// pts = second/timebase 
-
-					//Encode
-					//AVRational itime = stream_input->time_base;
-					//AVRational otime = stream_output->time_base;
-
-					
 					frameAAC->pts = av_rescale_q(frameAAC->nb_samples * pts++, codecContext_output->time_base, formatContext_output->streams[stream_index]->time_base);
-					//printf("audio.pts:%d\n", frameAAC->pts);
-					//pst_p += av_rescale_q(frameAAC->nb_samples, codecContext_output->time_base, stream_output->time_base);
 
 					if (avcodec_send_frame(codecContext_output, frameAAC) == 0) {
 						if (avcodec_receive_packet(codecContext_output, avpkt_out) == 0)
 						{
 							if (avpkt_out->size > 0) {
 
-								//avpkt_out->pts = av_rescale_q_rnd(avpkt_in->pts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));// 前面是原始的 ,后面是要转换成为的
-								//avpkt_out->dts = av_rescale_q_rnd(avpkt_in->dts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
-								//avpkt_out->duration = av_rescale_q_rnd(avpkt_in->duration, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
-
-								//avpkt_out->pts = av_rescale_q(avpkt_out->pts, codecContext_output->time_base, { 1,AV_TIME_BASE });// 前面是原始的 ,后面是要转换成为的
-								//avpkt_out->dts = av_rescale_q(avpkt_out->dts, codecContext_output->time_base, { 1,AV_TIME_BASE });
-								//avpkt_out->duration = av_rescale_q(avpkt_out->duration, codecContext_output->time_base, { 1,AV_TIME_BASE });
 								avpkt_out->pos = -1;
 								avpkt_out->stream_index = stream_index;
 
-								printf("pts:%d,dts:%d,size:%d,duration:%d\n", avpkt_out->pts, avpkt_out->dts, avpkt_out->size, avpkt_out->duration);
+								//printf("pts:%d,dts:%d,size:%d,duration:%d\n", avpkt_out->pts, avpkt_out->dts, avpkt_out->size, avpkt_out->duration);
 
 								ret = av_interleaved_write_frame(formatContext_output, avpkt_out);
 								if (ret != 0)
 								{
 									//XError(ret);
 								}
-								//cout << "@" << flush;
+								cout << "@" << flush;
 							}
 						}
 					}
