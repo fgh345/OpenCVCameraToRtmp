@@ -40,6 +40,7 @@ public:
 };
 
 int initFFmpegFormat();
+TransmitBean initCamera();
 TransmitBean initCameraByOpencv();
 TransmitBean initMicrophone();
 int preFFmpegFormat();
