@@ -12,10 +12,10 @@ int out_video_bit_rate = 128000;//视频比特率
 int out_sample_rate = 44100;//音频采样
 int out_audio_bit_rate = 64000;//音频比特率
 
-char vdevice_in_url[] = "video=screen-capture-recorder";//Surface Camera Front | USB2.0 Camera | (TC-UB570, Video Capture) | screen-capture-recorder
+char vdevice_in_url[] = "video=USB2.0 Camera";//Surface Camera Front | USB2.0 Camera | (TC-UB570, Video Capture) | screen-capture-recorder
 char adevice_in_url[] = "audio=virtual-audio-capturer";//麦克风设备 virtual-audio-capturer ub570 (TC-UB570, Audio Capture)
-//char file_out_path[] = "rtmp://49.232.191.221/live/hkz";//rtmp://49.232.191.221/live/hkz | rtmp://192.168.30.20/live/livestream
-char file_out_path[] = "../out/result_file.flv";
+char file_out_path[] = "rtmp://49.232.191.221/live/hkz";//rtmp://49.232.191.221/live/hkz | rtmp://192.168.30.20/live/livestream
+//char file_out_path[] = "../out/result_file.flv";
 
 //int64_t startTime;
 
